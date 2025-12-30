@@ -1,0 +1,7 @@
+{
+  "name": "Abang Colek: Fruit Slicer",
+  "description": "An authentic arcade fruit slicing experience featuring stylized visuals, level progression, and a Sensei powered by Gemini 3 Flash.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
