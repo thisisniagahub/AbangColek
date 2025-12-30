@@ -7,7 +7,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getSenseiAdvice } from '../services/geminiService';
 import { Point, Fruit, Particle, FruitType, DebugInfo } from '../types';
-import { Loader2, Trophy, BrainCircuit, Play, Eye, Terminal, Target, Lightbulb, Monitor, Zap, Timer, Medal, ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
+import { Loader2, Trophy, BrainCircuit, Play, Eye, Terminal, Target, Lightbulb, Monitor, Zap, Timer, Medal, ChevronRight, RotateCcw, Sparkles, CameraOff } from 'lucide-react';
 
 const GRAVITY = 0.22;
 const INITIAL_SPAWN_INTERVAL = 1400;
@@ -50,6 +50,7 @@ const GeminiFruitSlicer: React.FC = () => {
   // React UI state
   const [gameState, setGameState] = useState<GameState>('START');
   const [loading, setLoading] = useState(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const [level, setLevel] = useState(1);
@@ -367,7 +368,20 @@ const GeminiFruitSlicer: React.FC = () => {
           },
           width: 1280, height: 720,
         });
-        camera.start().catch((e: any) => console.error("Camera start failed", e));
+        
+        camera.start()
+          .then(() => {
+            setCameraError(null);
+          })
+          .catch((e: any) => {
+            console.error("Camera start failed", e);
+            setLoading(false);
+            if (e.name === 'NotAllowedError' || e.message?.includes('Permission denied')) {
+                setCameraError("Akses kamera ditolak. Mohon izinkan akses kamera di browser Anda untuk bermain.");
+            } else {
+                setCameraError("Gagal memulai kamera. Pastikan kamera terhubung dan tidak digunakan aplikasi lain.");
+            }
+          });
       }
     }
 
@@ -550,7 +564,8 @@ const GeminiFruitSlicer: React.FC = () => {
 
                  <button 
                     onClick={startGame}
-                    className="group relative bg-white text-black font-black text-3xl px-16 py-8 rounded-[40px] flex items-center gap-8 hover:scale-110 active:scale-95 transition-all shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:bg-yellow-400 hover:text-black border-b-8 border-black/20 uppercase"
+                    disabled={!!cameraError}
+                    className="group relative bg-white text-black font-black text-3xl px-16 py-8 rounded-[40px] flex items-center gap-8 hover:scale-110 active:scale-95 transition-all shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:bg-yellow-400 hover:text-black border-b-8 border-black/20 uppercase disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-white disabled:hover:text-black"
                  >
                      <Play className="w-10 h-10 fill-current" /> 
                      Mulai Motong!
@@ -611,7 +626,23 @@ const GeminiFruitSlicer: React.FC = () => {
             </div>
         )}
 
-        {loading && (
+        {cameraError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#080808] z-[200]">
+             <div className="flex flex-col items-center p-12 text-center max-w-xl bg-[#1a1a1a] rounded-[48px] border border-red-500/20 shadow-2xl">
+                 <CameraOff className="w-24 h-24 text-red-500 mb-8 animate-pulse" />
+                 <h2 className="text-4xl font-black text-white mb-4 uppercase tracking-tighter">Kamera Error</h2>
+                 <p className="text-gray-400 mb-8 font-bold text-lg">{cameraError}</p>
+                 <button 
+                   onClick={() => window.location.reload()}
+                   className="bg-red-600 text-white font-black py-4 px-10 rounded-full hover:bg-red-500 transition-all shadow-lg active:scale-95"
+                 >
+                   MUAT ULANG HALAMAN
+                 </button>
+             </div>
+          </div>
+        )}
+
+        {loading && !cameraError && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#080808] z-[200]">
             <div className="flex flex-col items-center">
               <div className="relative mb-10">
