@@ -426,8 +426,21 @@ const GeminiFruitSlicer: React.FC = () => {
             if (nL > levelRef.current) { levelRef.current = nL; setLevel(nL); soundManager.playLevelUp(); pulseIntensity.current = 1.0; setShowLevelUp(true); setTimeout(() => setShowLevelUp(false), 2000); }
             xpPoints.current.push({ x: fruit.x, y: fruit.y - 30, value: config.points, color: config.hex, life: 1.0, vx: 0, vy: -2 });
         }
-        (fruit as any).slicedTime = performance.now(); fruit.sliceAngle = Math.atan2(dy, dx);
-        fruit.vy = Math.min(fruit.vy, 0) - 10 - Math.random() * 4; fruit.vx = (fruit.vx * 0.3) + (dx * 0.15); fruit.rotationSpeed += (Math.random() - 0.5) * 0.5;
+        (fruit as any).slicedTime = performance.now(); 
+        fruit.sliceAngle = Math.atan2(dy, dx);
+        
+        // --- IMPROVED PHYSICS ---
+        // Store impact intensity for dynamic separation
+        (fruit as any).impactIntensity = Math.min(Math.max(speed, 10), 40);
+        
+        // Strong upward pop regardless of original velocity (pop the halves up)
+        fruit.vy = -12 - Math.random() * 5;
+        
+        // Transfer some lateral blade momentum to the main body
+        fruit.vx = (dx * 0.3);
+        
+        // Add random spin to make it feel chaotic
+        fruit.rotationSpeed += (Math.random() - 0.5) * 0.8;
       }
     });
   };
@@ -517,14 +530,44 @@ const GeminiFruitSlicer: React.FC = () => {
     fruits.current.forEach(f => {
         ctx.save(); ctx.translate(f.x, f.y);
         if (f.isSliced) {
-             const angle = f.sliceAngle || 0; const tS = performance.now() - ((f as any).slicedTime || 0);
-             let sep = tS < 80 ? -15 * (1 - tS/80) : Math.min(250, (tS-80) * 0.9 + ((tS-80)**2 * 0.003));
+             const angle = f.sliceAngle || 0; 
+             const tS = performance.now() - ((f as any).slicedTime || 0);
+             
+             // --- IMPROVED MASH & SEPARATION LOGIC ---
+             const impact = (f as any).impactIntensity || 15;
+             let sep = 0;
+             
+             // Phase 1: MASH (0-60ms) - Quick compression/squash effect
+             // Negative separation makes halves overlap/mash together
+             if (tS < 60) {
+                // Sine wave for organic squash and recoil
+                sep = -12 * Math.sin((tS / 60) * Math.PI); 
+             } else {
+                // Phase 2: SEPARATION (>60ms) - Fly apart
+                // Dynamic separation based on blade speed + acceleration over time
+                const flyTime = tS - 60;
+                sep = (impact * 0.8) * (flyTime * 0.05) + (flyTime * flyTime * 0.0015);
+             }
+
              ctx.save(); ctx.rotate(f.rotation);
              [true, false].forEach(isTop => {
-                ctx.save(); ctx.rotate(angle - f.rotation); ctx.scale(tS<80?1.15:1, tS<80?0.85:1); ctx.rotate(-(angle - f.rotation));
-                ctx.save(); ctx.rotate(angle - f.rotation); ctx.translate(0, isTop ? -sep : sep); ctx.rotate(-(angle - f.rotation));
-                ctx.rotate(isTop ? -0.2 : 0.2); if (fruitCache.current[`${f.type}_${isTop?'top':'bottom'}`]) ctx.drawImage(fruitCache.current[`${f.type}_${isTop?'top':'bottom'}`], -f.radius*3.5, -f.radius*3.5);
-                ctx.restore(); ctx.restore();
+                ctx.save(); 
+                ctx.rotate(angle - f.rotation); 
+                // Slight scale pulse during mash
+                const scale = tS < 60 ? 1.05 : 1.0;
+                ctx.scale(scale, scale);
+                
+                ctx.translate(0, isTop ? -sep : sep); 
+                ctx.rotate(-(angle - f.rotation));
+                
+                // Add slight angular drift between halves
+                const drift = isTop ? -0.1 : 0.1;
+                ctx.rotate(drift); 
+
+                if (fruitCache.current[`${f.type}_${isTop?'top':'bottom'}`]) {
+                    ctx.drawImage(fruitCache.current[`${f.type}_${isTop?'top':'bottom'}`], -f.radius*3.5, -f.radius*3.5);
+                }
+                ctx.restore();
              });
              ctx.restore();
         } else {
