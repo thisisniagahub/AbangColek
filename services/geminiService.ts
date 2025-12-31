@@ -20,7 +20,6 @@ export interface TargetCandidate {
     description: string;
 }
 
-// Fix: Use new GoogleGenAI instance inside each function call for dynamic API key access
 export const getSenseiAdvice = async (
   imageBase64: string,
   activeFruits: { type: string; y: number }[],
