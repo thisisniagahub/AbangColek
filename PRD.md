@@ -1,131 +1,93 @@
 
 # Product Requirements Document (PRD)
-# Abang Colek: Fruit Slicer (AR Arcade Edition)
+# Abang Fruit Ninja 🥭⚔️
 
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | :--- | :--- |
-| **Status** | Active |
-| **Product Type** | Web-based AR Game / AI Tech Demo |
-| **Tech Stack** | React, Vite, MediaPipe, Google Gemini API, Web Audio API |
+| **Status** | Production Ready |
+| **Product Type** | Web-based AR Game / GenAI Tech Demo |
+| **Tech Stack** | React 19, Vite, MediaPipe, Google Gemini 3 Flash, Web Audio API |
 
 ---
 
 ## 1. Executive Summary
 
-**Abang Colek** is a browser-based augmented reality (AR) arcade game that transforms the user's webcam feed into an interactive play area. Using computer vision, the user's hand becomes a virtual blade to slice falling fruits.
+**Abang Fruit Ninja** is a high-fidelity, browser-based Augmented Reality (AR) arcade game. It leverages computer vision to transform the user's webcam feed into an interactive canvas where their physical hand movements act as a digital blade.
 
-What sets this application apart is the integration of the **Flash Engine (Google Gemini 3 Flash)**. An AI "Sensei" continuously observes the gameplay, analyzing screenshots in real-time to provide context-aware tactical advice, technique improvements, and encouragement, blending traditional arcade mechanics with Generative AI coaching.
+The core differentiator is the integration of **Google Gemini 3 Flash** as an AI "Sensei". Unlike static game hints, this AI analyzes real-time gameplay screenshots to provide context-aware tactical advice, psychological encouragement, and technique optimization, creating a unique "Human-AI" feedback loop.
 
 ## 2. Problem Statement & Goals
 
-### 2.1 Problem
-*   Traditional browser games often lack physical interactivity.
-*   AI in games is usually pre-programmed logic (NPCs) rather than generative, context-aware reasoning.
-*   "Fruit Ninja" style games usually require touchscreens or mouse input, lacking the immersion of physical movement.
+### 2.1 The Problem
+*   **Static Gameplay**: Browser games often feel disconnected from the physical world.
+*   **Dumb NPCs**: In-game "mentors" usually cycle through pre-written text regardless of player performance.
+*   **Hardware Barrier**: AR experiences usually require expensive headsets or app installations.
 
-### 2.2 Goals
-*   **Immersion**: Create a seamless 60FPS AR experience where the digital and physical worlds align.
-*   **Innovation**: Demonstrate the speed and multimodal capabilities of Gemini 3 Flash for real-time game commentary.
-*   **Accessibility**: Run entirely in the browser without external hardware (VR headsets/controllers).
-*   **Performance**: Maintain a lightweight footprint by synthesizing audio and procedural assets rather than loading heavy files.
+### 2.2 The Solution
+*   **Zero-Setup AR**: Runs instantly in a web browser using standard webcams.
+*   **Multimodal AI**: Uses an LLM that "sees" the game state to give relevant advice.
+*   **Engagement**: Combines physical activity with arcade dopamine loops (combos, sounds, visuals).
 
 ## 3. User Personas
 
-*   **The Casual Gamer**: Wants a quick, fun distraction during breaks. Appreciates the "Abang Colek" (Street Vendor) aesthetic.
-*   **The Tech Enthusiast**: Interested in seeing how MediaPipe and LLMs can function together in a real-time web app.
-*   **The Competitive Player**: Wants to achieve the "Diamond" rank and maximize high-score efficiency.
+1.  **The Casual Player**: Wants a fun, 60-second distraction. Enjoys the colorful "Abang" (Indonesian street vendor) aesthetic.
+2.  **The Tech Developer**: Interested in the implementation of `gemini-3-flash-preview` for real-time video analysis and `@mediapipe` for hand tracking.
+3.  **The High Scorer**: Obsessed with maximizing efficiency, specifically targeting high-value fruits (Sweet Mango) and avoiding Bombs.
 
 ## 4. Functional Requirements
 
-### 4.1 Gameplay Mechanics
-*   **Hand Tracking**: The system must track the user's hand (specifically landmark 8 - Index Finger Tip) using MediaPipe Hands.
-*   **The Blade**: A visual trail must follow the user's finger. A "swoosh" sound must play when the movement velocity exceeds a specific threshold.
-*   **Spawning**: Fruits spawn from the bottom of the screen with varying velocities and rotation speeds.
-*   **Slicing Physics**: 
-    *   A slice is registered when the blade line segment intersects with a fruit's bounding circle.
-    *   Fruits must split visually (rendering two clipped halves) and fall away.
-    *   Particles (juice) must explode at the point of impact.
-*   **Game Loop**:
-    *   **Start Screen**: Instruction & Call to Action.
-    *   **Play State**: 60-second timer.
-    *   **Game Over**: Final score display and rank calculation.
+### 4.1 Core Gameplay
+*   **Hand Tracking**:
+    *   Must track the user's **Index Finger Tip** (Landmark 8) via MediaPipe.
+    *   Must render a visual "Blade Trail" following the finger coordinates.
+    *   Must calculate velocity to trigger "Swoosh" sound effects.
+*   **Fruit Mechanics**:
+    *   **Spawning**: Fruits launch from the bottom of the screen with randomized X/Y velocity and rotation.
+    *   **Gravity**: All entities must obey a gravity constant (`0.38`).
+    *   **Slicing**: A slice occurs when the blade line segment intersects a fruit's radius.
+    *   **Visuals**: Fruits must separate into Top/Bottom sprites upon slicing.
+*   **Entities**:
+    *   **Fruits**: Guava (10pts), Mango (20pts), Pineapple (50pts), Sweet Mango (150pts).
+    *   **Hazards**: "Spicy Bottle" (Bomb) - Deducts 1 life and causes screen shake.
+*   **Progression**:
+    *   **Leveling**: Level increases based on score thresholds.
+    *   **Difficulty**: Spawn rate increases and Bomb probability rises (1.5% per level) as the game progresses.
 
-### 4.2 Game Entities (Fruits)
-| Type | Visual Color | Points | Behavior |
-| :--- | :--- | :--- | :--- |
-| **Guava** | Green (#4CAF50) | 10 | Common, slow moving. |
-| **Mango** | Gold (#FFC107) | 20 | Standard speed. |
-| **Pineapple** | Yellow (#FFEB3B) | 50 | Larger, faster fall speed. |
-| **Sweet Mango** | Red-Orange (#FF5722) | 150 | Rare (7% spawn rate), high velocity. |
+### 4.2 AI Sensei (Gemini Integration)
+*   **Trigger**: The game captures a canvas snapshot (JPEG, 0.6 quality) during gameplay.
+*   **Input**: Image + Text Context (Score, Active Fruits List).
+*   **Processing**: Sent to `gemini-3-flash-preview`.
+*   **Output**: JSON object containing:
+    *   `message`: The Sensei's dialogue.
+    *   `priorityFruit`: Which fruit the player should target next.
+*   **Performance**: AI processing must be non-blocking to the 60FPS render loop.
 
-### 4.3 AI Sensei (Gemini Integration)
-*   **Trigger**: The system sends a game screenshot (compressed JPEG) to Gemini 3 Flash when specific conditions are met (e.g., specific spawn intervals or user request).
-*   **Context**: The prompt must include current score, active fruit list, and game rules.
-*   **Output**: The AI must return a JSON object containing:
-    *   `message`: A short, punchy coaching tip.
-    *   `rationale`: Why this tip was given.
-    *   `priorityFruit`: Which fruit type to focus on.
-    *   `techniqueTip`: Physical movement advice.
-*   **Latency**: The UI must handle "Thinking" states without freezing the game loop.
-
-### 4.4 Audio System
-*   **Technology**: Web Audio API (No external assets).
-*   **SFX**:
-    *   *Swoosh*: Filtered white noise.
-    *   *Slice*: Sawtooth oscillator + low-pass noise.
-    *   *Level Up*: Major Arpeggio.
-    *   *Game Over*: Diminished run + Kick drum.
-*   **Controls**: Global Mute toggle.
+### 4.3 Audio System
+*   **Synthesis**: Use Web Audio API for all sounds (no external MP3s).
+*   **Effects**:
+    *   Slice (Sawtooth wave + Noise).
+    *   Bomb (Low freq oscillator + distortion).
+    *   Level Up (Arpeggio).
 
 ## 5. Non-Functional Requirements
 
-*   **Privacy**: Webcam data must be processed locally via MediaPipe. Only screenshots (game canvas) are sent to Gemini; no raw video stream is stored or transmitted.
-*   **Performance**: The game loop must maintain 60FPS. AI requests must be asynchronous and non-blocking.
-*   **Responsiveness**: The canvas must resize to fit the container.
-*   **Error Handling**: If the camera is denied, a clear, user-friendly error message ("Akses kamera ditolak") must be displayed with reload instructions.
+*   **Privacy**: Webcam data is processed entirely client-side (Edge AI) via MediaPipe. Only discrete screenshots are sent to Gemini API; no continuous video stream is recorded.
+*   **Performance**: Game loop must maintain 60 FPS on standard laptops/phones.
+*   **Latency**: AI response time should aim for <1.5s (facilitated by Gemini Flash).
+*   **Responsiveness**: HUD must adapt to mobile and desktop aspect ratios.
 
-## 6. User Interface (UI) & UX
+## 6. UI/UX Design
 
-### 6.1 Visual Style
-*   **Theme**: Cyber-Arcade meets Indonesian Street Vendor ("Abang Colek").
-*   **Palette**: Dark Mode (Background #0a0a0a) with Neon Accents (Cyan #03A9F4, Yellow #FFD700).
-*   **Typography**: `Roboto` with bold, italicized, uppercase headers for high impact.
+*   **Theme**: Dark Mode (`#050505`) with Neon Accents.
+*   **HUD**:
+    *   **Top Bar**: Hearts (Lives), Score, Level, Timer.
+    *   **Center Overlay**: "Sensei Hint" box that glows the color of the priority fruit.
+    *   **Game Over**: High contrast modal with Rank (Novice to Grandmaster).
 
-### 6.2 HUD Elements
-*   **Top Left**: "Abang Colek" branding.
-*   **Left Sidebar**: 
-    *   **Sensei Box**: Displays dynamic AI text. Changes border color based on priority fruit.
-    *   **Real-time Data**: Current Level, Debug view (optional).
-    *   **Vision**: Small thumbnail of what the AI "saw" (for transparency).
-*   **Top Overlay**: Score, Timer, Level Indicator.
+## 7. Roadmap
 
-### 6.3 Feedback Systems
-*   **Visual**: Screen shake or flash on level up. Floating text for points is not currently implemented but score updates immediately.
-*   **Audio**: Immediate feedback on interaction.
+*   **v1.0 (Current)**: Core Slicer, Gemini Sensei, Local Scoring.
+*   **v1.1**: "Slingshot" Minigame Module (Experimental code exists).
+*   **v1.2**: Leaderboards using Firebase.
+*   **v2.0**: Multiplayer Duel Mode (WebRTC).
 
-## 7. Technical Architecture
-
-### 7.1 Component Hierarchy
-*   `App.tsx`: Root container.
-*   `GeminiFruitSlicer.tsx`: The "God Component".
-    *   Manages `useRef` for physics state (mutable, no re-render).
-    *   Manages `useState` for UI (score, text).
-    *   Handles `requestAnimationFrame` loop.
-    *   Manages `navigator.mediaDevices.getUserMedia`.
-*   `services/geminiService.ts`: Stateless service for API calls.
-*   `services/soundService.ts`: Singleton class for audio context management.
-
-### 7.2 External Dependencies
-*   **@mediapipe/hands**: Hand tracking model.
-*   **@google/genai**: Gemini API client.
-*   **lucide-react**: Iconography.
-*   **TailwindCSS**: Styling engine.
-
-## 8. Future Roadmap
-
-*   **v1.1**: Add "Bomb" fruits that deduct points.
-*   **v1.2**: Voice Mode - Allow the user to shout "Start" or ask Sensei questions via microphone (Live API).
-*   **v2.0**: Multiplayer - Compare scores with a friend side-by-side.
-
----
-*End of Document*

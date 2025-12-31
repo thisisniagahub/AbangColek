@@ -36,7 +36,18 @@ export const getSenseiAdvice = async (
     timestamp: new Date().toLocaleTimeString()
   };
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Use process.env.API_KEY as per Google GenAI SDK guidelines
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey) {
+    console.error("API Key missing. Please set API_KEY in your environment variables.");
+    return {
+        hint: { message: "Sensei lost connection (Missing API Key)." },
+        debug: { ...debug, error: "Missing API_KEY" }
+    };
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   const fruitContext = activeFruits.length > 0 
     ? activeFruits.map(f => `${f.type} at height ${Math.round(f.y)}`).join(", ")
@@ -136,7 +147,10 @@ export const getStrategicHint = async (
     timestamp: new Date().toLocaleTimeString()
   };
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return { hint: { message: "API Key Missing" }, debug: { ...debug, error: "Missing Key" }};
+
+  const ai = new GoogleGenAI({ apiKey });
 
   const clusterContext = clusters.length > 0 
     ? clusters.map(c => `Cluster: ${c.color} (size ${c.size}) at Row ${c.row}, Col ${c.col} [${c.description}]`).join("; ")

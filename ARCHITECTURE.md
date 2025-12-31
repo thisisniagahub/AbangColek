@@ -1,97 +1,85 @@
 
-# Architecture Documentation: Abang Colek
+# System Architecture: Abang Fruit Ninja
 
-## 1. System Overview
+## 1. High-Level Overview
 
-**Abang Colek** is a client-side, browser-based Augmented Reality (AR) arcade game. It combines real-time computer vision with generative AI to create an interactive experience where the user's physical hand movements control digital game elements.
-
-The system operates on a hybrid architecture:
-1.  **Local Loop (Real-time)**: Physics, rendering, and hand tracking run entirely in the browser at 60 FPS.
-2.  **Cloud Loop (Asynchronous)**: Game state analysis and coaching run via the Google Gemini API.
-
-## 2. High-Level Diagram
+Abang Fruit Ninja is a **Hybrid Client-Cloud Application**.
+*   **Client (Browser)**: Handles the "Fast Loop" (60 FPS) including rendering, physics, input tracking, and audio synthesis.
+*   **Cloud (Google)**: Handles the "Slow Loop" (Asynchronous) including visual analysis and strategy generation via LLM.
 
 ```mermaid
 graph TD
-    User[User] -->|Webcam Feed| Browser[Browser / Client App]
-    User -->|Audio Output| Browser
+    User[User Hand Movement] -->|Webcam| MediaPipe[MediaPipe Hands (Local)]
+    MediaPipe -->|Landmarks| GameLoop[Game Loop (React/Canvas)]
     
-    subgraph Client ["Client Side (React + Vite)"]
-        MP[MediaPipe Hands] -->|Landmarks (x,y)| GameEngine[Game Engine / Canvas]
-        GameEngine -->|Render| UI[User Interface]
-        GameEngine -->|Trigger| Audio[Sound Service (Web Audio API)]
-        GameEngine -->|Capture Frame| AIService[Gemini Service]
+    subgraph "Fast Loop (60 FPS)"
+        GameLoop -->|Update| Physics[Physics Engine]
+        Physics -->|Collision?| State[Game State (Score/Lives)]
+        State -->|Render| Canvas[HTML5 Canvas]
+        State -->|Trigger| Audio[Web Audio API]
     end
     
-    subgraph Cloud ["Google Cloud"]
-        AIService -->|Image + Context| Gemini[Gemini 3 Flash API]
-        Gemini -->|JSON Strategy| AIService
+    subgraph "Slow Loop (Async)"
+        Canvas -->|Snapshot (Base64)| GeminiClient[@google/genai SDK]
+        State -->|Context Data| GeminiClient
+        GeminiClient -->|API Call| GeminiCloud[Google Gemini 3 Flash]
+        GeminiCloud -->|JSON Strategy| UI[React UI Overlay]
     end
 ```
 
-## 3. Core Components
+## 2. Core Components
 
-### 3.1. The Game Engine (`GeminiFruitSlicer.tsx`)
-This is the "God Component" that manages the entire lifecycle of the application. It does not use a standard game engine (like Phaser) but instead implements a custom game loop using React `refs` and HTML5 Canvas.
+### 2.1 The "God Component" (`GeminiFruitSlicer.tsx`)
+Because this is a canvas-based game within React, specific architectural patterns are used to avoid React's render cycle overhead:
+*   **Refs (`useRef`)**: Used for all high-frequency mutable data (Fruit positions, Particle arrays, Blade trail). modifying these does *not* trigger a React re-render.
+*   **State (`useState`)**: Used only for UI overlays (Score, Game Over screen, Hints).
+*   **Loop**: Driven by `requestAnimationFrame` implicitly via the MediaPipe `onResults` callback.
 
-*   **State Management**: Uses `useRef` for high-frequency mutable state (fruit positions, particles, blade trail) to avoid React re-render overhead. Uses `useState` only for UI updates (score, game over screens, AI hints).
-*   **Physics Engine**: A simple Euler integration physics system handling gravity, velocity, and rotation.
-*   **Collision Detection**: Implements line-segment-to-circle collision detection to determine when the "blade" (hand trail) intersects with fruit.
+### 2.2 Input Pipeline (Computer Vision)
+*   **Library**: `@mediapipe/hands`.
+*   **Configuration**:
+    *   `maxNumHands`: 1 (Single player).
+    *   `modelComplexity`: 1 (Balanced for speed/accuracy).
+*   **Normalization**: Coordinates returned are 0.0-1.0. These are mapped to `canvas.width` and `canvas.height`.
 
-### 3.2. Computer Vision Integration (`MediaPipe`)
-The app utilizes `@mediapipe/hands` loaded via CDN.
-*   **Input**: Raw video stream from `<video>` element.
-*   **Processing**: Runs inference on every animation frame.
-*   **Output**: Normalized coordinates (0.0 to 1.0) of 21 hand landmarks.
-*   **Mapping**: The app specifically tracks Landmark 8 (Index Finger Tip) to render the slicing blade.
+### 2.3 The AI Pipeline (`geminiService.ts`)
+This service acts as the bridge between the game state and the LLM.
+1.  **Capture**: An offscreen canvas draws the current game frame.
+2.  **Compression**: Converted to `image/jpeg` at 0.6 quality to reduce payload size.
+3.  **Prompt Engineering**: A structured system prompt injects the game rules and scoring values into the context.
+4.  **Schema**: The model is instructed to return `application/json` to ensure the frontend can parse the "Priority Fruit" programmatically.
 
-### 3.3. AI "Sensei" Service (`geminiService.ts`)
-This module handles communication with the Google Gemini API.
-*   **Trigger**: The game loop triggers an analysis request based on specific game events or intervals.
-*   **Payload**:
-    1.  A base64 compressed JPEG screenshot of the current canvas.
-    2.  Metadata about active fruits (types, positions).
-    3.  Current score.
-*   **Model**: Uses `gemini-3-flash-preview` for low-latency multimodal reasoning.
-*   **Output**: Structured JSON containing "Sensei" advice, tactical rationale, and debug info.
+### 2.4 Audio Engine (`soundService.ts`)
+A singleton class wrapper around `AudioContext`.
+*   **Oscillators**: Used for tonal sounds (Music, Slice tone).
+*   **Buffers**: Noise buffers generated programmatically on init (used for explosions/swooshes).
+*   **Gain Nodes**: Handle volume ramping (Envelopes) for realistic decay.
 
-### 3.4. Audio Synthesis (`soundService.ts`)
-Instead of loading static MP3/WAV assets, the application synthesizes sound in real-time using the **Web Audio API**.
-*   **Benefits**: Zero network latency for assets, extremely small bundle size, dynamic pitch/volume modulation.
-*   **Implementation**:
-    *   *Swoosh*: Bandpass-filtered white noise with automated gain ramps.
-    *   *Slice*: Sawtooth oscillator mixed with low-passed noise.
-    *   *Music/Stings*: Oscillators playing specific frequencies (arpeggios).
+## 3. Data Flow & State Management
 
-## 4. Data Flow Pipelines
+### 3.1 Physics Loop
+The physics integration is **Euler-based**:
+```typescript
+velocity_y += gravity;
+position_x += velocity_x;
+position_y += velocity_y;
+```
+*   **Time Step**: Tied to screen refresh rate (typically 16ms).
+*   **Collision**: Line-Segment to Circle intersection.
+    *   Line: `(LastHandPos, CurrentHandPos)`
+    *   Circle: `(FruitPos, Radius)`
 
-### 4.1. The Rendering Loop
-1.  **MediaPipe** calls `onResults` callback.
-2.  **Canvas Clear**: The 2D context is cleared.
-3.  **Video Draw**: The webcam feed is drawn to the canvas (mirrored).
-4.  **Update Physics**: Fruit and particle positions are updated based on velocity and gravity.
-5.  **Collision Check**: The vector between the last two hand positions is checked against all active fruits.
-6.  **Draw Entities**: Fruits, particles, and the blade trail are rendered.
-7.  **Overlay UI**: React renders the HTML HUD over the canvas.
+### 3.2 Difficulty Curve
+Difficulty is algorithmic, calculated locally:
+*   **Spawn Rate**: `Math.max(300, INITIAL_SPAWN_INTERVAL - (level * 60))`
+*   **Bomb Chance**: `Math.min(0.35, 0.05 + ((level - 3) * 0.015))` (Starts at Level 3).
 
-### 4.2. The AI Analysis Loop
-1.  **Capture**: An offscreen canvas draws the current frame and converts it to a Data URL (JPEG, 0.6 quality).
-2.  **Send**: `GoogleGenAI` client sends the image + text prompt.
-3.  **Reasoning**: Gemini analyzes the visual density of fruits and the player's score.
-4.  **Feedback**: The response is parsed, and the React state `senseiHint` is updated, displaying the text on the HUD.
+## 4. Security & Environment
 
-## 5. Technical Decisions & Trade-offs
+*   **API Keys**: Managed via `process.env.API_KEY` (Standard for Google GenAI SDK).
+*   **Vercel Deployment**: Environment variables must be set in the Vercel Dashboard.
+*   **CORS**: Not applicable as MediaPipe loads models from CDN and Gemini API handles standard web requests.
 
-| Decision | Choice | Rationale |
-| :--- | :--- | :--- |
-| **Rendering** | HTML5 Canvas 2D | Lightweight, sufficient for 2D sprites, easy to overlay on video. WebGL/Three.js was deemed overkill for 2D slicing. |
-| **State** | `useRef` vs `useState` | `useRef` is mutable and doesn't trigger re-renders. This is crucial for the 60FPS game loop to prevent React reconciliation lag. |
-| **AI Model** | Gemini 3 Flash | Chosen for speed. The game is fast-paced; waiting for a larger model (Pro) would make the advice stale by the time it arrives. |
-| **Assets** | Programmatic Generation | Sound and Visuals (UI) are largely generated via code/CSS to keep the repository lightweight and self-contained. |
+## 5. Experimental Modules
 
-## 6. Directory Structure
-
-*   `src/components/`: React UI components and the main game canvas.
-*   `src/services/`: Singleton services for external logic (AI, Audio).
-*   `src/types.ts`: Shared TypeScript interfaces for strict typing of Game Entities and API Responses.
-*   `src/App.tsx`: Root layout and component mounting.
+*   **Slingshot Mode**: The codebase contains `GeminiSlingshot.tsx`. This is an alternative game mode using the same AI/CV architecture but different physics (Elastic/Projectile). It is currently decoupled from the main entry point.
