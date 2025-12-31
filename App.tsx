@@ -23,10 +23,11 @@ const App: React.FC = () => {
       default:
         return (
           <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-950 text-white p-6 relative overflow-hidden font-roboto selection:bg-yellow-500/30">
-             {/* Magic UI Backgrounds */}
+             {/* Magic UI Backgrounds - Updated to Tropical/Street aesthetic */}
              <div className="absolute inset-0 h-full w-full bg-neutral-950 bg-grid-white/[0.05] bg-[bottom_1px_center] [mask-image:linear-gradient(to_bottom,transparent,black)] pointer-events-none" />
-             <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/20 rounded-full blur-[128px] pointer-events-none animate-pulse" />
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[128px] pointer-events-none" />
+             <div className="absolute -top-40 -right-40 w-96 h-96 bg-yellow-500/20 rounded-full blur-[128px] pointer-events-none animate-pulse" />
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/10 rounded-full blur-[128px] pointer-events-none" />
+             <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-green-500/20 rounded-full blur-[128px] pointer-events-none" />
              
              <div className="z-10 w-full max-w-5xl animate-in fade-in zoom-in duration-700 flex flex-col items-center">
                 
@@ -42,7 +43,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
                     
-                    <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-br from-white via-neutral-200 to-neutral-500 drop-shadow-sm select-none">
+                    <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-br from-yellow-100 via-yellow-400 to-orange-500 drop-shadow-sm select-none" style={{ textShadow: '0 4px 12px rgba(255,160,0,0.3)' }}>
                         ABANG ARCADE
                     </h1>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
