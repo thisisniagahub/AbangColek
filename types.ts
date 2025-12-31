@@ -9,7 +9,7 @@ export interface Point {
   y: number;
 }
 
-export type FruitType = 'mango' | 'guava' | 'pineapple' | 'sweet_mango';
+export type FruitType = 'mango' | 'guava' | 'pineapple' | 'sweet_mango' | 'bomb';
 
 export interface Fruit {
   id: string;
@@ -32,6 +32,16 @@ export interface Particle {
   vy: number;
   life: number;
   color: string;
+}
+
+export interface XPPoint {
+  x: number;
+  y: number;
+  value: number;
+  color: string;
+  life: number;
+  vx: number;
+  vy: number;
 }
 
 // Added BubbleColor and Bubble for Slingshot game

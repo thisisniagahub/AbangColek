@@ -4,11 +4,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Abang Colek: Tukang Potong Buah</title>
+    <title>Abang Fruit Ninja: Tukang Potong Buah</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <!-- MediaPipe Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -20,11 +19,11 @@
         overflow: hidden;
         font-family: 'Roboto', sans-serif;
       }
+      /* Removed CSS transform: scaleX(-1) to prevent reversed text and graphics */
       canvas {
-        transform: scaleX(-1);
+        display: block;
       }
       video {
-        transform: scaleX(-1);
         display: none;
       }
     </style>
