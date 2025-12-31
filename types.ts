@@ -32,6 +32,7 @@ export interface Particle {
   vy: number;
   life: number;
   color: string;
+  wait?: number; // Optional delay before movement for "mashing" effect
 }
 
 export interface XPPoint {

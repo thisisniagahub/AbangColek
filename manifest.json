@@ -1,0 +1,19 @@
+
+{
+  "name": "Abang Fruit Ninja",
+  "short_name": "Abang Ninja",
+  "description": "Game potong buah AR dengan kearifan lokal bertenaga Gemini AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/415/415733.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
